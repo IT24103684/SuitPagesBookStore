@@ -5,8 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Book</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@lucide/web@latest"></script>
     <style>
-
         .focus-ring:focus {
             outline: none;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
@@ -180,7 +182,169 @@
         </div>
     </form>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
 
+        const bookForm = document.getElementById('bookForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const authorSelect = document.getElementById('authorId');
 
+        fetchAuthors();
+
+        const patterns = {
+            name: /^.{2,100}$/,
+            isbn: /^(?=(?:\D*\d){10}(?:(?:\D*\d){3})?$)[\d-]+$/,
+            imageUrl: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))?$/
+        };
+
+        function fetchAuthors() {
+            fetch('/api/authors')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch authors');
+                    }
+                    return response.json();
+                })
+                .then(authors => {
+                    while (authorSelect.options.length > 1) {
+                        authorSelect.remove(1);
+                    }
+
+                    authors.forEach(author => {
+                        const option = document.createElement('option');
+                        option.value = author.id;
+                        option.textContent = author.name;
+                        authorSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    showError('Failed to load authors: ' + error.message);
+                });
+        }
+
+        function validateField(field, pattern) {
+            const errorElement = document.getElementById(field.id + "Error");
+
+            if (field.required && !field.value.trim()) {
+                errorElement.textContent = field.name.charAt(0).toUpperCase() + field.name.slice(1) + " is required";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            if (pattern && field.value.trim() && !pattern.test(field.value.trim())) {
+                if (field.id === 'name') {
+                    errorElement.textContent = 'Title should be between 2-100 characters';
+                } else if (field.id === 'isbn') {
+                    errorElement.textContent = 'Please enter a valid ISBN (10 or 13 digits)';
+                } else if (field.id === 'imageUrl') {
+                    errorElement.textContent = 'Please enter a valid image URL (or leave empty)';
+                }
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            if ((field.id === 'price' || field.id === 'inStock') && field.value < 0) {
+                errorElement.textContent = field.id === 'price' ? 'Price must be greater than or equal to 0' : 'Stock quantity must be greater than or equal to 0';
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        function showError(message) {
+            errorMessage.querySelector('span').textContent = message;
+            errorMessage.classList.remove('hidden');
+            successMessage.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showSuccess(message) {
+            successMessage.querySelector('span').textContent = message;
+            successMessage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        bookForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+
+            const name = document.getElementById('name');
+            const isbn = document.getElementById('isbn');
+            const category = document.getElementById('category');
+            const price = document.getElementById('price');
+            const inStock = document.getElementById('inStock');
+            const authorId = document.getElementById('authorId');
+            const imageUrl = document.getElementById('imageUrl');
+
+            const isNameValid = validateField(name, patterns.name);
+            const isIsbnValid = validateField(isbn, patterns.isbn);
+            const isCategoryValid = validateField(category);
+            const isPriceValid = validateField(price);
+            const isInStockValid = validateField(inStock);
+            const isAuthorIdValid = validateField(authorId);
+            const isImageUrlValid = validateField(imageUrl, patterns.imageUrl);
+
+            if (isNameValid && isIsbnValid && isCategoryValid && isPriceValid && isInStockValid && isAuthorIdValid && isImageUrlValid) {
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...';
+
+                const bookData = {
+                    name: name.value.trim(),
+                    isbn: isbn.value.trim(),
+                    category: category.value,
+                    price: parseFloat(price.value),
+                    inStock: parseInt(inStock.value),
+                    authorId: authorId.value,
+                    imageUrl: imageUrl.value.trim() || null
+                };
+
+                fetch('/api/books', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bookData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(text || 'Failed to create book');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        bookForm.reset();
+
+                        showSuccess('Book created successfully!');
+
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="save" class="h-5 w-5 mr-2"></i>Create Book';
+                        lucide.createIcons();
+                        y
+                        setTimeout(() => {
+                            window.location.href = '/books';
+                        }, 2000);
+                    })
+                    .catch(error => {
+                        showError(error.message || 'An error occurred while creating the book');
+
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="save" class="h-5 w-5 mr-2"></i>Create Book';
+                        lucide.createIcons();
+                    });
+            }
+        });
+    });
+</script>
 </body>
 </html>
