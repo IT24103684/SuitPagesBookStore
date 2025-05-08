@@ -185,6 +185,223 @@
         </div>
     </div>
 </div>
+<script>
 
+    const userId = localStorage.getItem("userId") || "482d2287-d1bf-46b0-b96f-5b845137f13e";
+    let cartItems = [];
+    let bookDetails = {};
+
+    document.addEventListener("DOMContentLoaded", function() {
+        loadCart();
+
+
+        document.getElementById("clearCartBtn").addEventListener("click", clearCart);
+
+
+    });
+
+    function loadCart() {
+        fetch("/api/carts/" + userId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch cart");
+                }
+                return response.json();
+            })
+            .then(data => {
+                cartItems = data.items || [];
+                if (cartItems.length === 0) {
+                    showEmptyCart();
+                } else {
+                    loadBookDetails();
+                }
+            })
+            .catch(error => {
+                console.error("Error loading cart:", error);
+                showErrorMessage("Failed to load your cart. Please try again later.");
+            });
+    }
+
+    function loadBookDetails() {
+        const promises = cartItems.map(item => {
+            return fetch("/api/books/" + item.bookId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch book details");
+                    }
+                    return response.json();
+                })
+                .then(bookData => {
+                    bookDetails[item.bookId] = bookData;
+                    return bookData;
+                });
+        });
+
+        Promise.all(promises)
+            .then(() => {
+                renderCart();
+            })
+            .catch(error => {
+                console.error("Error loading book details:", error);
+                showErrorMessage("Failed to load book details. Please try again later.");
+            });
+    }
+
+    function renderCart() {
+        const cartContainer = document.getElementById("cartContainer");
+        cartContainer.innerHTML = "";
+
+        let total = 0;
+
+        cartItems.forEach(item => {
+            const book = bookDetails[item.bookId];
+            if (!book) return;
+
+            const itemTotal = book.price * item.quantity;
+            total += itemTotal;
+
+            const cartItemDiv = document.createElement("div");
+            cartItemDiv.className = "cart-item";
+
+
+            cartItemDiv.innerHTML = "<div class=\"cart-item-content d-flex\"> \
+    <img src=\"" + (book.imageUrl || 'images/book-placeholder.jpg') + "\" alt=\"" + book.title + "\" class=\"cart-item-image\"> \
+\
+    <div class=\"cart-item-details ms-3\"> \
+        <div class=\"cart-item-title\">" + book.name + "</div> \
+        <div class=\"cart-item-price\">\$" + book.price.toFixed(2) + "</div> \
+    </div> \
+\
+    <div class=\"quantity-control ms-auto d-flex align-items-center\"> \
+        <button class=\"quantity-btn\" onclick=\"updateQuantity('" + item.bookId + "', -1)\">-</button> \
+        <div class=\"quantity-display mx-2\">" + item.quantity + "</div> \
+        <button class=\"quantity-btn\" onclick=\"updateQuantity('" + item.bookId + "', 1)\">+</button> \
+    </div> \
+\
+    <div class=\"cart-item-total ms-3 text-end\"> \
+        <div class=\"cart-item-price\">\$" + itemTotal.toFixed(2) + "</div> \
+    </div> \
+\
+    <button class=\"remove-btn ms-3 btn btn-sm btn-outline-danger\" onclick=\"removeItem('" + item.bookId + "')\"> \
+        <i class=\"fas fa-trash-alt\"></i> \
+    </button> \
+</div>";
+            cartContainer.appendChild(cartItemDiv);
+        });
+
+        document.getElementById("cartTotal").textContent = total.toFixed(2);
+
+
+        document.getElementById("emptyCartMessage").style.display = "none";
+        document.getElementById("cartSummary").style.display = "block";
+    }
+
+    function updateQuantity(bookId, change) {
+        const item = cartItems.find(i => i.bookId === bookId);
+        if (!item) return;
+
+        const newQuantity = item.quantity + change;
+
+
+        if (newQuantity < 1) {
+            removeItem(bookId);
+            return;
+        }
+
+        fetch("/api/carts/" + userId + "/items", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                bookId: bookId,
+                quantity: change
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to update quantity");
+                }
+                return response.json();
+            })
+            .then(data => {
+                cartItems = data.items || [];
+                if (cartItems.length === 0) {
+                    showEmptyCart();
+                } else {
+                    renderCart();
+                }
+            })
+            .catch(error => {
+                console.error("Error updating quantity:", error);
+                alert("Failed to update quantity. Please try again.");
+            });
+    }
+
+    function removeItem(bookId) {
+        if (!confirm("Are you sure you want to remove this item from your cart?")) {
+            return;
+        }
+
+        fetch("/api/carts/" + userId + "/items/" + bookId, {
+            method: "DELETE"
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to remove item");
+                }
+                return response.json();
+            })
+            .then(data => {
+                cartItems = data.items || [];
+                if (cartItems.length === 0) {
+                    showEmptyCart();
+                } else {
+                    renderCart();
+                }
+            })
+            .catch(error => {
+                console.error("Error removing item:", error);
+                alert("Failed to remove item. Please try again.");
+            });
+    }
+
+    function clearCart() {
+        if (!confirm("Are you sure you want to clear your entire cart?")) {
+            return;
+        }
+
+        fetch("/api/carts/" + userId, {
+            method: "DELETE"
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to clear cart");
+                }
+                cartItems = [];
+                showEmptyCart();
+            })
+            .catch(error => {
+                console.error("Error clearing cart:", error);
+                alert("Failed to clear cart. Please try again.");
+            });
+    }
+
+    function showEmptyCart() {
+        document.getElementById("cartContainer").innerHTML = "";
+        document.getElementById("emptyCartMessage").style.display = "block";
+        document.getElementById("cartSummary").style.display = "none";
+    }
+
+    function showErrorMessage(message) {
+        const cartContainer = document.getElementById("cartContainer");
+        cartContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                ${message}
+            </div>
+        `;
+    }
+</script>
 </body>
 </html>
