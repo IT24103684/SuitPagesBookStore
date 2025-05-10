@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Users List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <style>
         .table-row-animate:hover {
@@ -46,7 +47,6 @@
             </div>
         </div>
     </div>
-
     <div class="md:hidden hidden bg-indigo-700" id="mobileMenu">
         <div class="container mx-auto px-4 py-2">
             <div class="flex flex-col space-y-2 pb-3">
@@ -68,7 +68,6 @@
         </div>
     </div>
 </div>
-
 
 <div class="container mx-auto px-4 py-8">
     <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -110,7 +109,6 @@
                 </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200" id="usersTableBody">
-
                 <tr>
                     <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
                         <div class="flex flex-col items-center justify-center">
@@ -153,12 +151,139 @@
                 <button type="button" id="confirmDeleteBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
                     Delete
                 </button>
-                <button type="button" id="cancelDeleteBtn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                     Cancel
                 </button>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    let allUsers = [];
+    let currentUserIdToDelete = null;
+
+    function fetchUsers() {
+        fetch('/api/users')
+            .then(response => response.json())
+            .then(users => {
+                allUsers = users;
+                renderUsers(allUsers);
+            })
+            .catch(error => {
+                console.error('Error fetching users:', error);
+                showEmptyState('Failed to load users');
+            });
+    }
+
+    function renderUsers(users) {
+        const tableBody = document.getElementById('usersTableBody');
+
+        if (users.length === 0) {
+            showEmptyState('No users found');
+            return;
+        }
+
+        tableBody.innerHTML = '';
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.className = 'table-row-animate hover:bg-gray-50';
+            row.dataset.id = user.id;
+
+            row.innerHTML =
+                "<td class=\"px-6 py-4 whitespace-nowrap\">" +
+                "<div class=\"flex items-center\">" +
+                "<div class=\"ml-4\">" +
+                "<div class=\"text-sm font-medium text-gray-900\">" + (user.name || 'N/A') + "</div>" +
+                "</div>" +
+                "</div>" +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                (user.email || 'N/A') +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                (user.address || 'N/A') +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                (user.gender && user.gender !== 'null' ? user.gender : 'N/A') +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">" +
+                "<div class=\"flex justify-end space-x-2\">" +
+                "<button onclick=\"confirmDelete('" + user.id + "', '" + user.name.replace("'", "\\'") + "')\" " +
+                "class=\"text-red-600 hover:text-red-900 btn-icon\">" +
+                "<i class=\"fas fa-trash-alt\"></i>" +
+                "</button>" +
+                "</div>" +
+                "</td>";
+
+            tableBody.appendChild(row);
+        });
+    }
+
+    function showEmptyState(message) {
+        const tableBody = document.getElementById('usersTableBody');
+        tableBody.innerHTML =
+            "<tr>" +
+            "<td colspan=\"5\" class=\"px-6 py-10 text-center text-sm text-gray-500\">" +
+            "<div class=\"flex flex-col items-center justify-center\">" +
+            "<i class=\"fas fa-user-slash text-4xl text-gray-300 mb-3\"></i>" +
+            "<p>" + message + "</p>" +
+            "</div>" +
+            "</td>" +
+            "</tr>";
+    }
+
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const filteredUsers = allUsers.filter(user =>
+            (user.name && user.name.toLowerCase().includes(searchTerm)) ||
+            (user.email && user.email.toLowerCase().includes(searchTerm)) ||
+            (user.address && user.address.toLowerCase().includes(searchTerm))
+        );
+        renderUsers(filteredUsers);
+    });
+
+    function confirmDelete(userId, userName) {
+        currentUserIdToDelete = userId;
+        document.getElementById('modal-title').textContent = "Delete User " + userName;
+        document.getElementById('modal-description').textContent =
+            "Are you sure you want to delete user \"" + userName + "\"? This action cannot be undone.";
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        currentUserIdToDelete = null;
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (!currentUserIdToDelete) return;
+
+        fetch(`/api/users/`+currentUserIdToDelete, {
+            method: 'DELETE'
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to delete user');
+                return response.json();
+            })
+            .then(() => {
+                closeModal();
+                fetchUsers();
+            })
+            .catch(error => {
+                console.error('Error deleting user:', error);
+                alert('Failed to delete user. Please try again.');
+            });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchUsers();
+
+        document.getElementById('mobileMenuButton').addEventListener('click', function() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        });
+    });
+</script>
 </body>
 </html>
