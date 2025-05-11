@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -241,9 +241,100 @@
 
         <div class="login-footer">
             <p>Don't have an account? <a href="register">Register here</a></p>
+
         </div>
     </div>
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            errorMessage.classList.remove('show');
+
+
+            loginBtn.classList.add('btn-loading');
+            loginBtn.innerHTML = '';
+
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+
+            const payload = {
+                email: email,
+                password: password
+            };
+
+            fetch('/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Login failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+
+                    localStorage.setItem('userId', data.id);
+
+
+                    if (data.name) {
+                        localStorage.setItem('userName', data.name);
+                    }
+
+                    if (data.email) {
+                        localStorage.setItem('userEmail', data.email);
+                    }
+
+                    if (remember) {
+
+                        localStorage.setItem('rememberUser', 'true');
+                    }
+
+
+
+                    window.location.href = "/";
+                })
+                .catch(error => {
+                    console.error('Login error:', error);
+
+                    loginBtn.classList.remove('btn-loading');
+                    loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+
+
+                    errorText.textContent = 'Invalid email or password. Please try again.';
+                    errorMessage.classList.add('show');
+                });
+        });
+
+        function getParameterByName(name) {
+            const url = window.location.href;
+            name = name.replace(/[\[\]]/g, '\\$&');
+            const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+            const results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+
+        if (localStorage.getItem('userId')) {
+            window.location.href = 'index';
+        }
+    });
+</script>
 </body>
 </html>
