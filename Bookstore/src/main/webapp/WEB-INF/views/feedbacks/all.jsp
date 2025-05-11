@@ -115,5 +115,23 @@
         </form>
     </div>
 </div>
+
+<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3">
+            <h3 class="text-xl font-medium text-gray-900">Confirm Delete</h3>
+            <button type="button" class="text-gray-400 hover:text-gray-500" id="closeDeleteModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="py-4">
+            <p class="text-gray-700">Are you sure you want to delete this feedback? This action cannot be undone.</p>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300" id="cancelDeleteBtn">Cancel</button>
+            <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700" id="confirmDeleteBtn">Delete</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
