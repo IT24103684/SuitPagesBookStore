@@ -5,6 +5,47 @@
     <meta charset="UTF-8">
     <title>Book Feedback - BookStore</title>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .feedback-card {
+            transition: all 0.3s ease;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .feedback-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        .star-rating {
+            color: #fbbf24;
+            font-size: 1rem;
+        }
+        .empty-star {
+            color: #d1d5db;
+            font-size: 1rem;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .book-select-card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        .book-select-card:hover {
+            background-color: #f3f4f6;
+        }
+        .book-select-card.selected {
+            border: 2px solid #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+
 </head>
 <body class="bg-gray-50">
 
