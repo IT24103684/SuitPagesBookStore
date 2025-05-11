@@ -72,5 +72,48 @@
     </div>
 </div>
 
+<div id="editFeedbackModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3">
+            <h3 class="text-xl font-medium text-gray-900" id="modalTitle">Edit Feedback</h3>
+            <button type="button" class="text-gray-400 hover:text-gray-500" id="closeEditModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editFeedbackForm">
+            <input type="hidden" id="feedbackId">
+            <div class="mb-4">
+                <label for="bookSelect" class="block text-sm font-medium text-gray-700 mb-2">Book</label>
+                <select id="bookSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <option value="">Select a book</option>
+                </select>
+            </div>
+            <input type="hidden" id="userId">
+
+            <div class="mb-4">
+                <label for="stars" class="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                <div class="flex space-x-1" id="starRating">
+                    <i class="fas fa-star text-2xl cursor-pointer" data-rating="1"></i>
+                    <i class="fas fa-star text-2xl cursor-pointer" data-rating="2"></i>
+                    <i class="fas fa-star text-2xl cursor-pointer" data-rating="3"></i>
+                    <i class="fas fa-star text-2xl cursor-pointer" data-rating="4"></i>
+                    <i class="fas fa-star text-2xl cursor-pointer" data-rating="5"></i>
+                </div>
+                <input type="hidden" id="stars" name="stars" required>
+            </div>
+
+            <div class="mb-4">
+                <label for="comment" class="block text-sm font-medium text-gray-700 mb-2">Comment</label>
+                <textarea id="comment" name="comment" rows="4"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300" id="cancelEditBtn">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Update</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>
