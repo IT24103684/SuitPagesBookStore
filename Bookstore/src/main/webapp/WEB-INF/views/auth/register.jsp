@@ -5,8 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register Account</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@lucide/web@latest"></script>
     <style>
+
         .focus-ring:focus {
             outline: none;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
@@ -177,5 +181,197 @@
         </p>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+
+        const registerForm = document.getElementById('registerForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const showPasswordIcon = document.getElementById('showPasswordIcon');
+        const hidePasswordIcon = document.getElementById('hidePasswordIcon');
+
+        togglePassword.addEventListener('click', function() {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                showPasswordIcon.classList.add('hidden');
+                hidePasswordIcon.classList.remove('hidden');
+            } else {
+                passwordInput.type = 'password';
+                showPasswordIcon.classList.remove('hidden');
+                hidePasswordIcon.classList.add('hidden');
+            }
+        });
+
+        const patterns = {
+            name: /^.{2,100}$/,
+            email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            password: /^.{6,}$/
+        };
+
+        function validateField(field, pattern) {
+            const errorElement = document.getElementById(field.id + "Error");
+
+            if (field.required && !field.value.trim()) {
+                errorElement.textContent = field.name.charAt(0).toUpperCase() + field.name.slice(1) + " is required";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            if (pattern && field.value.trim() && !pattern.test(field.value.trim())) {
+                if (field.id === 'name') {
+                    errorElement.textContent = 'Name should be between 2-100 characters';
+                } else if (field.id === 'email') {
+                    errorElement.textContent = 'Please enter a valid email address';
+                } else if (field.id === 'password') {
+                    errorElement.textContent = 'Password must be at least 6 characters';
+                }
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        function validateGender() {
+            const genderInputs = document.querySelectorAll('input[name="gender"]');
+            const errorElement = document.getElementById('genderError');
+            let isChecked = false;
+
+            for (const input of genderInputs) {
+                if (input.checked) {
+                    isChecked = true;
+                    break;
+                }
+            }
+
+            if (!isChecked) {
+                errorElement.textContent = "Please select a gender";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            errorElement.classList.add("hidden");
+            return true;
+        }
+
+        function validatePasswordMatch() {
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirmPassword');
+            const errorElement = document.getElementById('confirmPasswordError');
+
+            if (password.value !== confirmPassword.value) {
+                errorElement.textContent = "Passwords do not match";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            errorElement.classList.add("hidden");
+            return true;
+        }
+
+        function showError(message) {
+            errorMessage.querySelector('span').textContent = message;
+            errorMessage.classList.remove('hidden');
+            successMessage.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showSuccess(message) {
+            successMessage.querySelector('span').textContent = message;
+            successMessage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+
+            const name = document.getElementById('name');
+            const email = document.getElementById('email');
+            const address = document.getElementById('address');
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirmPassword');
+
+            const genderInputs = document.querySelectorAll('input[name="gender"]');
+            let gender = '';
+            for (const input of genderInputs) {
+                if (input.checked) {
+                    gender = input.value;
+                    break;
+                }
+            }
+
+            const isNameValid = validateField(name, patterns.name);
+            const isEmailValid = validateField(email, patterns.email);
+            const isAddressValid = validateField(address);
+            const isPasswordValid = validateField(password, patterns.password);
+            const isPasswordMatch = validatePasswordMatch();
+            const isGenderValid = validateGender();
+
+            if (isNameValid && isEmailValid && isAddressValid && isPasswordValid && isPasswordMatch && isGenderValid) {
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating Account...';
+
+                const userData = {
+                    name: name.value.trim(),
+                    email: email.value.trim(),
+                    address: address.value.trim(),
+                    password: password.value,
+                    gender: gender
+                };
+
+                fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(text || 'Failed to create account');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+
+                        registerForm.reset();
+
+
+                        showSuccess('Account created successfully! Redirecting to login page...');
+
+
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>Create Account';
+                        lucide.createIcons();
+
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 2000);
+                    })
+                    .catch(error => {
+                        showError(error.message || 'An error occurred while creating your account');
+
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>Create Account';
+                        lucide.createIcons();
+                    });
+            }
+        });
+    });
+</script>
 </body>
 </html>
