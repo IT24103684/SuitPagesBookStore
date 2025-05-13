@@ -132,5 +132,164 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+
+        const authorForm = document.getElementById('authorForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const authorId = document.getElementById('authorId').value;
+
+        const patterns = {
+            name: /^[A-Za-z\s]{2,50}$/,
+            imageUrl: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))?$/
+        };
+
+        function validateField(field, pattern) {
+            const errorElement = document.getElementById(field.id + "Error");
+
+            if (field.required && !field.value.trim()) {
+                errorElement.textContent = field.name.charAt(0).toUpperCase() + field.name.slice(1) + " is required";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            if (pattern && field.value.trim() && !pattern.test(field.value.trim())) {
+                if (field.id === 'name') {
+                    errorElement.textContent = 'Name should contain only letters and spaces (2-50 characters)';
+                } else if (field.id === 'imageUrl') {
+                    errorElement.textContent = 'Please enter a valid image URL (or leave empty)';
+                }
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            if (field.id === 'age' && field.value < 1) {
+                errorElement.textContent = 'Age must be greater than 0';
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        authorForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+
+            const name = document.getElementById('name');
+            const gender = document.getElementById('gender');
+            const imageUrl = document.getElementById('imageUrl');
+            const age = document.getElementById('age');
+
+            const isNameValid = validateField(name, patterns.name);
+            const isGenderValid = validateField(gender);
+            const isImageUrlValid = validateField(imageUrl, patterns.imageUrl);
+            const isAgeValid = validateField(age);
+
+            if (isNameValid && isGenderValid && isImageUrlValid && isAgeValid) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...';
+
+                const authorData = {
+                    id: authorId,
+                    name: name.value.trim(),
+                    gender: gender.value,
+                    imageUrl: imageUrl.value.trim() || null,
+                    age: parseInt(age.value)
+                };
+
+                const contextPath = "${pageContext.request.contextPath}";
+                const apiUrl = contextPath + "/api/authors/" + authorId;
+
+                fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(authorData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.message || 'Failed to update author. Server returned ' + response.status);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        successMessage.querySelector('span').textContent = 'Author updated successfully!';
+                        successMessage.classList.remove('hidden');
+
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .catch(error => {
+                        errorMessage.querySelector('span').textContent = error.message || 'An unexpected error occurred';
+                        errorMessage.classList.remove('hidden');
+
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="save" class="h-5 w-5 mr-2"></i>Update Author';
+                        lucide.createIcons();
+                    });
+            }
+        });
+
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this author? This action cannot be undone.')) {
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Deleting...';
+
+                const contextPath = "${pageContext.request.contextPath}";
+                const apiUrl = contextPath + "/api/authors/" + authorId;
+
+                fetch(apiUrl, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to delete author. Server returned ' + response.status);
+                        }
+                        window.location.href = contextPath + "/authors";
+                    })
+                    .catch(error => {
+                        errorMessage.querySelector('span').textContent = error.message || 'An unexpected error occurred';
+                        errorMessage.classList.remove('hidden');
+
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = '<i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>Delete';
+                        lucide.createIcons();
+
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+            }
+        });
+
+        document.getElementById('name').addEventListener('input', function() {
+            validateField(this, patterns.name);
+        });
+
+        document.getElementById('gender').addEventListener('change', function() {
+            validateField(this);
+        });
+
+        document.getElementById('imageUrl').addEventListener('input', function() {
+            validateField(this, patterns.imageUrl);
+        });
+
+        document.getElementById('age').addEventListener('input', function() {
+            validateField(this);
+        });
+    });
+</script>
 </body>
 </html>
