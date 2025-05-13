@@ -7,6 +7,7 @@
     <title>Create Author</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@lucide/web@latest"></script>
     <style>
         .focus-ring:focus {
             outline: none;
@@ -18,7 +19,7 @@
 <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-2xl font-bold text-gray-800">Create New Author</h1>
-        <a href="#" class="bg-gray-100 text-gray-700 hover:bg-gray-200 py-2 px-4 rounded-lg border text-sm flex items-center transition-colors">
+        <a href="${pageContext.request.contextPath}/authors" class="bg-gray-100 text-gray-700 hover:bg-gray-200 py-2 px-4 rounded-lg border text-sm flex items-center transition-colors">
             <i data-lucide="arrow-left" class="h-4 w-4 mr-1"></i>
             Back
         </a>
@@ -119,5 +120,131 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+
+        const authorForm = document.getElementById('authorForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+
+        const patterns = {
+            name: /^[A-Za-z\s]{2,50}$/,
+            imageUrl: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))?$/
+        };
+
+        function validateField(field, pattern) {
+            const errorElement = document.getElementById(field.id + "Error");
+
+            if (field.required && !field.value.trim()) {
+                errorElement.textContent = field.name.charAt(0).toUpperCase() + field.name.slice(1) + " is required";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            if (pattern && field.value.trim() && !pattern.test(field.value.trim())) {
+                if (field.id === 'name') {
+                    errorElement.textContent = 'Name should contain only letters and spaces (2-50 characters)';
+                } else if (field.id === 'imageUrl') {
+                    errorElement.textContent = 'Please enter a valid image URL (or leave empty)';
+                }
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            if (field.id === 'age' && field.value < 1) {
+                errorElement.textContent = 'Age must be greater than 0';
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        authorForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+
+            const name = document.getElementById('name');
+            const gender = document.getElementById('gender');
+            const imageUrl = document.getElementById('imageUrl');
+            const age = document.getElementById('age');
+
+            const isNameValid = validateField(name, patterns.name);
+            const isGenderValid = validateField(gender);
+            const isImageUrlValid = validateField(imageUrl, patterns.imageUrl);
+            const isAgeValid = validateField(age);
+
+            if (isNameValid && isGenderValid && isImageUrlValid && isAgeValid) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...';
+
+                const authorData = {
+                    name: name.value.trim(),
+                    gender: gender.value,
+                    imageUrl: imageUrl.value.trim() || null,
+                    age: parseInt(age.value)
+                };
+
+                const apiUrl = window.location.pathname.startsWith('/') ? '/api/authors' : `${window.location.pathname}/api/authors`;
+
+                fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(authorData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.message || 'Failed to create author. Server returned ' + response.status);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        successMessage.querySelector('span').textContent = 'Author created successfully!';
+                        successMessage.classList.remove('hidden');
+                        authorForm.reset();
+
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .catch(error => {
+                        errorMessage.querySelector('span').textContent = error.message || 'An unexpected error occurred';
+                        errorMessage.classList.remove('hidden');
+
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="save" class="h-5 w-5 mr-2"></i>Create Author';
+                        lucide.createIcons();
+                    });
+            }
+        });
+
+        document.getElementById('name').addEventListener('input', function() {
+            validateField(this, patterns.name);
+        });
+
+        document.getElementById('gender').addEventListener('change', function() {
+            validateField(this);
+        });
+
+        document.getElementById('imageUrl').addEventListener('input', function() {
+            validateField(this, patterns.imageUrl);
+        });
+
+        document.getElementById('age').addEventListener('input', function() {
+            validateField(this);
+        });
+    });
+</script>
 </body>
 </html>
