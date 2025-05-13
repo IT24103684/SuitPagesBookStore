@@ -2,7 +2,13 @@
 <html>
 <head>
     <title>Feedbacks</title>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        .star-rating {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
 <nav class="bg-indigo-600 text-white shadow-lg">
