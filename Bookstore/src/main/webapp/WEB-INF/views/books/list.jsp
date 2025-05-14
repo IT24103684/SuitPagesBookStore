@@ -210,6 +210,175 @@
     </div>
 </footer>
 
+<script>
 
+    document.getElementById('mobileMenuButton').addEventListener('click', function() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    function showNotification(type, message) {
+        const notificationArea = document.getElementById('notificationArea');
+        const notification = document.getElementById(type + 'Notification');
+        const messageElement = document.getElementById(type + 'Message');
+
+        messageElement.textContent = message;
+        notificationArea.classList.remove('hidden');
+        notification.classList.remove('hidden');
+
+        setTimeout(() => {
+            hideNotification(type + 'Notification');
+        }, 5000);
+    }
+
+    function hideNotification(id) {
+        const notification = document.getElementById(id);
+        notification.classList.add('hidden');
+
+        const successHidden = document.getElementById('successNotification').classList.contains('hidden');
+        const errorHidden = document.getElementById('errorNotification').classList.contains('hidden');
+
+        if (successHidden && errorHidden) {
+            document.getElementById('notificationArea').classList.add('hidden');
+        }
+    }
+
+    function openDeleteModal(id, title) {
+        const modal = document.getElementById('deleteModal');
+        const modalDescription = document.getElementById('modal-description');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        modalDescription.textContent = "Are you sure you want to delete \"" + title + "\"? This action cannot be undone.";
+
+        modal.classList.remove('hidden');
+
+        confirmDeleteBtn.onclick = function() {
+            deleteBook(id);
+        };
+    }
+
+    function closeModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    function deleteBook(id) {
+        fetch(/api/books/+id, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+    .then(response => {
+            if (response.ok) {
+                closeModal();
+                showNotification('success', 'Book deleted successfully');
+                loadBooks(); // Reload the books list
+            } else {
+                throw new Error('Failed to delete book');
+            }
+        })
+            .catch(error => {
+                closeModal();
+                showNotification('error', error.message);
+            });
+    }
+
+    function loadBooks() {
+        const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+        fetch('/api/books')
+            .then(response => response.json())
+            .then(books => {
+                const tableBody = document.getElementById('booksTableBody');
+                tableBody.innerHTML = '';
+
+                const filteredBooks = books.filter(book =>
+                    book.name.toLowerCase().includes(searchQuery) ||
+                    book.category.toLowerCase().includes(searchQuery)
+                );
+
+                if (filteredBooks.length === 0) {
+
+                    tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-book text-gray-300 text-5xl mb-4"></i>
+                                <p class="text-gray-500 text-lg font-medium">No books found</p>
+                                <p class="text-gray-400 mt-1">Try adjusting your search or add a new book</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                } else {
+                    // Render each book
+                    filteredBooks.forEach(book => {
+                        const row = document.createElement('tr');
+                        row.className = 'table-row-animate transition-all hover:bg-gray-50';
+
+                        row.innerHTML =
+                            "<td class=\"px-6 py-4 whitespace-nowrap\">" +
+                            "<div class=\"flex items-center\">" +
+                            "<div class=\"flex-shrink-0 h-10 w-10\">" +
+                            "<img class=\"h-10 w-10 rounded-full object-cover\" src=\"" + (book.imageUrl || "https://via.placeholder.com/150?text=Book") + "\" alt=\"" + book.name + "\">" +
+                            "</div>" +
+                            "<div class=\"ml-4\">" +
+                            "<div class=\"text-sm font-medium text-gray-900\">" + book.name + "</div>" +
+                            "<div class=\"text-sm text-gray-500\">ISBN: " + book.isbn + "</div>" +
+                            "</div>" +
+                            "</div>" +
+                            "</td>" +
+                            "<td class=\"px-6 py-4 whitespace-nowrap\">" +
+                            "<span class=\"px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800\">" +
+                            book.category +
+                            "</span>" +
+                            "</td>" +
+                            "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                            "$" + book.price.toFixed(2) +
+                            "</td>" +
+                            "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                            book.inStock +
+                            "</td>" +
+                            "<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">" +
+                            "<div class=\"flex justify-end space-x-2\">" +
+                            "<a href=\"/books/edit/" + book.id + "\" class=\"text-indigo-600 hover:text-indigo-900 btn-icon\">" +
+                            "<i class=\"fas fa-edit\"></i>" +
+                            "</a>" +
+                            "<button onclick=\"openDeleteModal('" + book.id + "', '" + book.name + "')\" class=\"text-red-600 hover:text-red-900 btn-icon\">" +
+                            "<i class=\"fas fa-trash-alt\"></i>" +
+                            "</button>" +
+                            "</div>" +
+                            "</td>";
+
+                        tableBody.appendChild(row);
+                    });
+
+                }
+            })
+            .catch(error => {
+                showNotification('error', 'Failed to load books: ' + error.message);
+            });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', function() {
+        loadBooks();
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBooks();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const successMsg = urlParams.get('success');
+        const errorMsg = urlParams.get('error');
+
+        if (successMsg) {
+            showNotification('success', decodeURIComponent(successMsg));
+        }
+
+        if (errorMsg) {
+            showNotification('error', decodeURIComponent(errorMsg));
+        }
+    });
+</script>
 </body>
 </html>
