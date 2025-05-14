@@ -35,6 +35,7 @@
                     <a href="/admin" class="hover:text-indigo-200 transition">Dashboard</a>
                     <a href="/books" class="hover:text-indigo-200 transition">Books</a>
                     <a href="/authors" class="hover:text-indigo-200 transition font-medium border-b-2 border-white pb-1">Authors</a>
+
                 </div>
             </div>
             <div class="flex items-center space-x-4">
@@ -56,6 +57,7 @@
                 <a href="/admin" class="py-2 hover:bg-indigo-600 px-2 rounded">Dashboard</a>
                 <a href="/books" class="py-2 hover:bg-indigo-600 px-2 rounded">Books</a>
                 <a href="/authors" class="py-2 bg-indigo-800 px-2 rounded">Authors</a>
+
             </div>
         </div>
     </div>
@@ -98,7 +100,7 @@
             <div class="ml-3 flex-grow">
                 <p class="text-sm font-medium" id="successMessage"></p>
             </div>
-            <button class="ml-auto">
+            <button onclick="hideNotification('successNotification')" class="ml-auto">
                 <i class="fas fa-times text-green-700"></i>
             </button>
         </div>
@@ -110,7 +112,7 @@
             <div class="ml-3 flex-grow">
                 <p class="text-sm font-medium" id="errorMessage"></p>
             </div>
-            <button class="ml-auto">
+            <button onclick="hideNotification('errorNotification')" class="ml-auto">
                 <i class="fas fa-times text-red-700"></i>
             </button>
         </div>
@@ -174,7 +176,7 @@
                 <button type="button" id="confirmDeleteBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
                     Delete
                 </button>
-                <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                     Cancel
                 </button>
             </div>
@@ -189,5 +191,220 @@
         </div>
     </div>
 </footer>
+
+<script>
+    let authors = [];
+
+    async  function  loadAuthors(){
+        const response=    await fetch("/api/authors");
+        if(response.ok){
+            authors  = await  response.json();
+
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded',async function() {
+        await   loadAuthors();
+        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        mobileMenuButton.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('success')) {
+            showNotification('success', urlParams.get('success'));
+        }
+
+        populateAuthorsTable(authors);
+
+        if (authors.length > 10) {
+            setupPagination(authors.length);
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function() {
+            const searchText = this.value.toLowerCase();
+            filterAuthors(searchText);
+        });
+    });
+
+    function populateAuthorsTable(authorsData) {
+        const tableBody = document.getElementById('authorsTableBody');
+        tableBody.innerHTML = '';
+
+        if (authorsData.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = "<td colspan=\"4\" class=\"px-6 py-10 text-center text-sm text-gray-500\"><div class=\"flex flex-col items-center justify-center\"><i class=\"fas fa-user-slash text-4xl text-gray-300 mb-3\"></i><p>No authors found</p><a href=\"/authors/create\" class=\"mt-2 text-indigo-600 hover:text-indigo-800\">Add your first author</a></div></td>";
+            tableBody.appendChild(emptyRow);
+        } else {
+            authorsData.forEach(author => {
+                const row = document.createElement('tr');
+                row.className = 'table-row-animate transition-all duration-200';
+                row.setAttribute('data-id', author.id);
+                row.setAttribute('data-name', author.name);
+
+                const initials = author.name.charAt(0);
+
+                let genderClass = '';
+                if (author.gender === 'Male') {
+                    genderClass = 'bg-blue-100 text-blue-800';
+                } else if (author.gender === 'Female') {
+                    genderClass = 'bg-pink-100 text-pink-800';
+                } else {
+                    genderClass = 'bg-purple-100 text-purple-800';
+                }
+
+                row.innerHTML = "<td class=\"px-6 py-4 whitespace-nowrap\"><div class=\"flex items-center\"><div class=\"flex-shrink-0 h-10 w-10\">" +
+                    (author.imageUrl ?
+                        "<img class=\"h-10 w-10 rounded-full object-cover\" src=\"" + author.imageUrl + "\" alt=\"" + author.name + "\">" :
+                        "<div class=\"h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center\"><span class=\"text-indigo-700 font-medium text-lg\">" + initials + "</span></div>") +
+                    "</div><div class=\"ml-4\"><div class=\"text-sm font-medium text-gray-900\">" + author.name + "</div></div></div></td>" +
+                    "<td class=\"px-6 py-4 whitespace-nowrap\"><span class=\"px-2 inline-flex text-xs leading-5 font-semibold rounded-full " + genderClass + "\">" + author.gender + "</span></td>" +
+                    "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" + author.age + " years</td>" +
+                    "<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\"><div class=\"flex justify-end space-x-2\">" +
+                    "<a href=\"/authors/edit/" + author.id + "\" class=\"text-indigo-600 hover:text-indigo-900 btn-icon\" title=\"Edit\"><i class=\"fas fa-edit\"></i></a>" +
+                    "<button onclick=\"confirmDelete('" + author.id + "', '" + author.name + "')\" class=\"text-red-600 hover:text-red-900 btn-icon\" title=\"Delete\"><i class=\"fas fa-trash-alt\"></i></button>" +
+                    "</div></td>";
+                tableBody.appendChild(row);
+            });
+        }
+    }
+
+    function filterAuthors(searchText) {
+        const filteredAuthors = authors.filter(author =>
+            author.name.toLowerCase().includes(searchText)
+        );
+
+        populateAuthorsTable(filteredAuthors);
+
+        const tableBody = document.getElementById('authorsTableBody');
+        if (filteredAuthors.length === 0 && searchText !== '') {
+            const noResultsRow = document.createElement('tr');
+            noResultsRow.className = 'search-empty-row';
+            noResultsRow.innerHTML = "<td colspan=\"4\" class=\"px-6 py-8 text-center text-sm text-gray-500\"><div class=\"flex flex-col items-center\"><i class=\"fas fa-search text-3xl text-gray-300 mb-2\"></i><p>No authors found matching \"<span class=\"font-medium\">" + searchText + "</span>\"</p></div></td>";
+            tableBody.appendChild(noResultsRow);
+        }
+    }
+
+    function setupPagination(totalItems) {
+        const paginationContainer = document.getElementById('pagination-container');
+        const totalPages = Math.ceil(totalItems / 10);
+
+        paginationContainer.innerHTML = "<div class=\"bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-lg shadow-md\"><div class=\"flex-1 flex justify-between sm:hidden\"><a href=\"#\" class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50\">Previous</a><a href=\"#\" class=\"ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50\">Next</a></div><div class=\"hidden sm:flex-1 sm:flex sm:items-center sm:justify-between\"><div><p class=\"text-sm text-gray-700\">Showing <span class=\"font-medium\">1</span> to <span class=\"font-medium\">10</span> of <span class=\"font-medium\">" + totalItems + "</span> results</p></div><div><nav class=\"relative z-0 inline-flex rounded-md shadow-sm -space-x-px\" aria-label=\"Pagination\"><a href=\"#\" class=\"relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50\"><span class=\"sr-only\">Previous</span><i class=\"fas fa-chevron-left h-5 w-5\"></i></a><a href=\"#\" aria-current=\"page\" class=\"z-10 bg-indigo-50 border-indigo-500 text-indigo-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium\">1</a>" +
+            (totalPages > 1 ? "<a href=\"#\" class=\"bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium\">2</a>" : "") +
+            (totalPages > 2 ? "<a href=\"#\" class=\"bg-white border-gray-300 text-gray-500 hover:bg-gray-50 hidden md:inline-flex relative items-center px-4 py-2 border text-sm font-medium\">3</a>" : "") +
+            (totalPages > 3 ? "<span class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...</span>" : "") +
+            (totalPages > 3 ? "<a href=\"#\" class=\"bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium\">" + totalPages + "</a>" : "") +
+            "<a href=\"#\" class=\"relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50\"><span class=\"sr-only\">Next</span><i class=\"fas fa-chevron-right h-5 w-5\"></i></a></nav></div></div></div>";
+    }
+
+    let currentAuthorId = null;
+
+    function confirmDelete(id, name) {
+        currentAuthorId = id;
+        document.getElementById('modal-description').innerText = 'Are you sure you want to delete "' + name + '"? This action cannot be undone.';
+        document.getElementById('deleteModal').classList.remove('hidden');
+        document.getElementById('confirmDeleteBtn').addEventListener('click', deleteAuthor);
+    }
+
+    function closeModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+        document.getElementById('confirmDeleteBtn').removeEventListener('click', deleteAuthor);
+        currentAuthorId = null;
+    }
+
+    function deleteAuthor() {
+        if (!currentAuthorId) return;
+
+        const row = document.querySelector('tr[data-id=\"' + currentAuthorId + '\"]');
+        const authorName = row ? row.getAttribute('data-name') : '';
+
+        const deleteBtn = document.getElementById('confirmDeleteBtn');
+        const originalBtnText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin mr-2\"></i> Deleting...';
+        deleteBtn.disabled = true;
+
+        fetch('/api/authors/' + currentAuthorId, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('Author not found');
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Failed to delete author');
+                        });
+                    }
+                }
+
+                closeModal();
+
+                if (row) {
+                    row.style.backgroundColor = '#FEE2E2';
+                    row.style.transition = 'opacity 0.5s ease';
+                    setTimeout(() => {
+                        row.style.opacity = '0';
+                        setTimeout(() => {
+                            row.remove();
+
+                            const remainingRows = document.querySelectorAll('#authorsTableBody tr[data-id]');
+                            if (remainingRows.length === 0) {
+                                const tableBody = document.getElementById('authorsTableBody');
+                                const emptyRow = document.createElement('tr');
+                                emptyRow.innerHTML = '<td colspan=\"4\" class=\"px-6 py-10 text-center text-sm text-gray-500\"><div class=\"flex flex-col items-center justify-center\"><i class=\"fas fa-user-slash text-4xl text-gray-300 mb-3\"></i><p>No authors found</p><a href=\"/authors/create\" class=\"mt-2 text-indigo-600 hover:text-indigo-800\">Add your first author</a></div></td>';
+                                tableBody.appendChild(emptyRow);
+                            }
+
+                            showNotification('success', 'Author "' + authorName + '" has been deleted successfully.');
+                        }, 500);
+                    }, 100);
+                } else {
+                    showNotification('success', 'Author has been deleted successfully.');
+                }
+            })
+            .catch(error => {
+                closeModal();
+                showNotification('error', error.message);
+            });
+    }
+
+    function showNotification(type, message) {
+        const notificationArea = document.getElementById('notificationArea');
+        const successNotification = document.getElementById('successNotification');
+        const errorNotification = document.getElementById('errorNotification');
+
+        successNotification.classList.add('hidden');
+        errorNotification.classList.add('hidden');
+
+        if (type === 'success') {
+            document.getElementById('successMessage').textContent = message;
+            successNotification.classList.remove('hidden');
+        } else {
+            document.getElementById('errorMessage').textContent = message;
+            errorNotification.classList.remove('hidden');
+        }
+
+        notificationArea.classList.remove('hidden');
+
+        setTimeout(() => {
+            hideNotification(type === 'success' ? 'successNotification' : 'errorNotification');
+        }, 5000);
+    }
+
+    function hideNotification(id) {
+        document.getElementById(id).classList.add('hidden');
+
+        if (document.getElementById('successNotification').classList.contains('hidden') &&
+            document.getElementById('errorNotification').classList.contains('hidden')) {
+            document.getElementById('notificationArea').classList.add('hidden');
+        }
+    }
+</script>
 </body>
 </html>
