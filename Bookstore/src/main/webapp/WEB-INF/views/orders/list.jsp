@@ -304,6 +304,449 @@
         </div>
     </div>
 </footer>
+<script>
+    let allOrders = [];
+    let filteredOrders = [];
+    let userCache = {};
+    let bookCache = {};
+    let currentOrderId = null;
 
+    const ordersTableBody = document.getElementById("ordersTableBody");
+    const searchInput = document.getElementById("searchInput");
+    const statusFilter = document.getElementById("statusFilter");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        mobileMenuButton.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        fetchOrders();
+
+        searchInput.addEventListener("input", filterOrders);
+        statusFilter.addEventListener("change", filterOrders);
+
+        document.getElementById("updateStatusBtn").addEventListener("click", updateOrderStatus);
+
+        document.getElementById("confirmDeleteBtn").addEventListener("click", deleteOrder);
+    });
+
+    function showLoading() {
+        loadingOverlay.style.display = "flex";
+    }
+
+    function hideLoading() {
+        loadingOverlay.style.display = "none";
+    }
+
+    function fetchOrders() {
+        showLoading();
+
+        fetch("/api/orders")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch orders");
+                }
+                return response.json();
+            })
+            .then(orders => {
+                allOrders = orders;
+                filteredOrders = [...orders];
+
+                if (orders.length === 0) {
+                    showEmptyOrders();
+                } else {
+                    enrichOrdersData(orders);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching orders:", error);
+                showNotification('error', "Failed to load orders. Please try again later.");
+                hideLoading();
+            });
+    }
+
+    function enrichOrdersData(orders) {
+        const userPromises = [];
+        const bookPromises = [];
+
+        const userIds = [...new Set(orders.map(order => order.userId))];
+        const bookIds = [...new Set(orders.flatMap(order => order.items.map(item => item.bookId)))];
+
+        userIds.forEach(userId => {
+            if (!userCache[userId]) {
+                const promise = fetch("/api/users/" + userId)
+                    .then(response => response.ok ? response.json() : { id: userId, name: "Unknown User" })
+                    .then(user => {
+                        userCache[userId] = user;
+                        return user;
+                    })
+                    .catch(error => {
+                        console.error("Error fetching user " + userId + ":", error);
+                        userCache[userId] = { id: userId, name: "Unknown User" };
+                    });
+                userPromises.push(promise);
+            }
+        });
+
+        bookIds.forEach(bookId => {
+            if (!bookCache[bookId]) {
+                const promise = fetch("/api/books/" + bookId)
+                    .then(response => response.ok ? response.json() : { id: bookId, name: "Unknown Book", imageUrl: "" })
+                    .then(book => {
+                        bookCache[bookId] = book;
+                        return book;
+                    })
+                    .catch(error => {
+                        console.error("Error fetching book " + bookId + ":", error);
+                        bookCache[bookId] = { id: bookId, name: "Unknown Book", imageUrl: "" };
+                    });
+                bookPromises.push(promise);
+            }
+        });
+
+        Promise.all([...userPromises, ...bookPromises])
+            .then(() => {
+                renderOrdersTable(filteredOrders);
+                hideLoading();
+            })
+            .catch(error => {
+                console.error("Error enriching orders data:", error);
+                renderOrdersTable(filteredOrders);
+                hideLoading();
+            });
+    }
+
+    function filterOrders() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusValue = statusFilter.value;
+
+        filteredOrders = allOrders.filter(order => {
+            if (statusValue && order.status !== statusValue) {
+                return false;
+            }
+
+            if (searchTerm) {
+                const user = userCache[order.userId] || { name: "Unknown User" };
+
+                return order.id.toLowerCase().includes(searchTerm) ||
+                    user.name.toLowerCase().includes(searchTerm) ||
+                    order.address.toLowerCase().includes(searchTerm);
+            }
+
+            return true;
+        });
+
+        renderOrdersTable(filteredOrders);
+    }
+
+    function renderOrdersTable(orders) {
+        if (orders.length === 0) {
+            ordersTableBody.innerHTML =
+                "<tr>" +
+                "<td colspan=\"7\" class=\"px-6 py-10 text-center text-sm text-gray-500\">" +
+                "<div class=\"flex flex-col items-center justify-center\">" +
+                "<i class=\"fas fa-box-open text-4xl text-gray-300 mb-3\"></i>" +
+                "<p>No orders match your search criteria.</p>" +
+                "</div>" +
+                "</td>" +
+                "</tr>";
+            return;
+        }
+
+        let html = "";
+
+        orders.forEach(order => {
+            const user = userCache[order.userId] || {name: "Unknown User"};
+            const orderDate = new Date(order.orderDate);
+            const formattedDate = orderDate.toLocaleDateString("en-US", {
+                year: "numeric", month: "short", day: "numeric"
+            });
+
+            let orderTotal = 0;
+            order.items.forEach(item => {
+                orderTotal += item.price * item.quantity;
+            });
+
+
+            let statusClass = "";
+            switch(order.status) {
+                case "PENDING":
+                    statusClass = "bg-yellow-100 text-yellow-800";
+                    break;
+                case "COMPLETED":
+                    statusClass = "bg-green-100 text-green-800";
+                    break;
+                case "CANCELLED":
+                    statusClass = "bg-red-100 text-red-800";
+                    break;
+                case "DELIVERED":
+                    statusClass = "bg-blue-100 text-blue-800";
+                    break;
+                default:
+                    statusClass = "bg-gray-100 text-gray-800";
+            }
+
+            html +=
+                "<tr class=\"table-row-animate transition-all duration-200\" data-id=\"" + order.id + "\">" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">" +
+                order.id.substring(0, 8) + "..." +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap\">" +
+                "<div class=\"text-sm text-gray-900\">" + user.name + "</div>" +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                formattedDate +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                order.items.length +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">" +
+                "$" + orderTotal.toFixed(2) +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap\">" +
+                "<span class=\"px-2.5 py-0.5 rounded-full text-xs font-medium " + statusClass + "\">" +
+                order.status +
+                "</span>" +
+                "</td>" +
+                "<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">" +
+                "<div class=\"flex justify-end space-x-2\">" +
+                "<button onclick=\"openViewModal('" + order.id + "')\" class=\"text-indigo-600 hover:text-indigo-900 btn-icon\" title=\"View\">" +
+                "<i class=\"fas fa-eye\"></i>" +
+                "</button>" +
+                "<button onclick=\"openDeleteModal('" + order.id + "')\" class=\"text-red-600 hover:text-red-900 btn-icon\" title=\"Delete\">" +
+                "<i class=\"fas fa-trash-alt\"></i>" +
+                "</button>" +
+                "</div>" +
+                "</td>" +
+                "</tr>";
+        });
+
+        ordersTableBody.innerHTML = html;
+    }
+
+    function showEmptyOrders() {
+        ordersTableBody.innerHTML =
+            "<tr>" +
+            "<td colspan=\"7\" class=\"px-6 py-10 text-center text-sm text-gray-500\">" +
+            "<div class=\"flex flex-col items-center justify-center\">" +
+            "<i class=\"fas fa-box-open text-4xl text-gray-300 mb-3\"></i>" +
+            "<h3 class=\"text-lg font-medium\">No Orders Found</h3>" +
+            "<p>There are no orders in the system yet.</p>" +
+            "</div>" +
+            "</td>" +
+            "</tr>";
+        hideLoading();
+    }
+
+    function openViewModal(orderId) {
+        currentOrderId = orderId;
+        const order = allOrders.find(o => o.id === orderId);
+        if (!order) return;
+
+        const user = userCache[order.userId] || {name: "Unknown User"};
+        const orderDate = new Date(order.orderDate);
+        const formattedDate = orderDate.toLocaleDateString("en-US", {
+            year: "numeric", month: "long", day: "numeric",
+            hour: "2-digit", minute: "2-digit"
+        });
+
+        let orderTotal = 0;
+        order.items.forEach(item => {
+            orderTotal += item.price * item.quantity;
+        });
+
+        document.getElementById("viewOrderId").textContent = order.id;
+        document.getElementById("viewOrderDate").textContent = formattedDate;
+        document.getElementById("viewCustomerName").textContent = user.name;
+        document.getElementById("viewAddress").textContent = order.address;
+
+        const statusElement = document.getElementById("viewCurrentStatus");
+        statusElement.textContent = order.status;
+
+        let statusClass = "";
+        switch(order.status) {
+            case "PENDING":
+                statusClass = "bg-yellow-100 text-yellow-800";
+                break;
+            case "COMPLETED":
+                statusClass = "bg-green-100 text-green-800";
+                break;
+            case "CANCELLED":
+                statusClass = "bg-red-100 text-red-800";
+                break;
+            case "DELIVERED":
+                statusClass = "bg-blue-100 text-blue-800";
+                break;
+            default:
+                statusClass = "bg-gray-100 text-gray-800";
+        }
+        statusElement.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium " + statusClass;
+
+        document.getElementById("updateStatus").value = order.status;
+
+        document.getElementById("viewOrderTotal").textContent = "$" + orderTotal.toFixed(2);
+
+        const viewOrderItems = document.getElementById("viewOrderItems");
+        let itemsHtml = "";
+
+        order.items.forEach(item => {
+            const book = bookCache[item.bookId] || {name: "Unknown Book", imageUrl: ""};
+            const itemTotal = item.quantity * item.price;
+
+            itemsHtml +=
+                "<div class=\"flex items-start border-b border-gray-100 pb-3 last:border-0\">" +
+                "<img src=\"" + (book.imageUrl || 'https://via.placeholder.com/60x90?text=No+Image') + "\" " +
+                "class=\"book-image rounded mr-3\" " +
+                "alt=\"" + book.name + "\">" +
+                "<div class=\"flex-1\">" +
+                "<div class=\"flex justify-between\">" +
+                "<h5 class=\"text-sm font-medium text-gray-900\">" + book.name + "</h5>" +
+                "<span class=\"text-sm text-gray-900\">\$" + item.price.toFixed(2) + "</span>" +
+                "</div>" +
+                "<div class=\"flex justify-between mt-1\">" +
+                "<p class=\"text-xs text-gray-500\">Qty: " + item.quantity + "</p>" +
+                "<p class=\"text-xs text-gray-500\">Total: \$" + itemTotal.toFixed(2) + "</p>" +
+                "</div>" +
+                "</div>" +
+                "</div>";
+        });
+
+        viewOrderItems.innerHTML = itemsHtml;
+
+        document.getElementById('viewOrderModal').classList.remove('hidden');
+    }
+
+    function updateOrderStatus() {
+        showLoading();
+
+        const newStatus = document.getElementById("updateStatus").value;
+
+        fetch("/api/orders/" + currentOrderId + "/status", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || "Failed to update order status");
+                    });
+                }
+                return response.json();
+            })
+            .then(updatedOrder => {
+                const index = allOrders.findIndex(o => o.id === currentOrderId);
+                if (index !== -1) {
+                    allOrders[index] = updatedOrder;
+
+                    const statusElement = document.getElementById("viewCurrentStatus");
+                    statusElement.textContent = updatedOrder.status;
+
+                    let statusClass = "";
+                    switch(updatedOrder.status) {
+                        case "PENDING":
+                            statusClass = "bg-yellow-100 text-yellow-800";
+                            break;
+                        case "COMPLETED":
+                            statusClass = "bg-green-100 text-green-800";
+                            break;
+                        case "CANCELLED":
+                            statusClass = "bg-red-100 text-red-800";
+                            break;
+                        case "DELIVERED":
+                            statusClass = "bg-blue-100 text-blue-800";
+                            break;
+                        default:
+                            statusClass = "bg-gray-100 text-gray-800";
+                    }
+                    statusElement.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium " + statusClass;
+
+                    filterOrders();
+                }
+
+                hideLoading();
+                showNotification("success", "Order status updated successfully");
+            })
+            .catch(error => {
+                console.error("Error updating order status:", error);
+                hideLoading();
+                showNotification("error", error.message || "Failed to update order status");
+            });
+    }
+
+    function openDeleteModal(orderId) {
+        currentOrderId = orderId;
+        document.getElementById("deleteOrderId").textContent = orderId;
+        document.getElementById('deleteOrderModal').classList.remove('hidden');
+    }
+
+    function deleteOrder() {
+        showLoading();
+
+        fetch("/api/orders/" + currentOrderId, {
+            method: "DELETE"
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to delete order");
+                }
+
+                allOrders = allOrders.filter(o => o.id !== currentOrderId);
+                filterOrders();
+
+                closeModal('deleteOrderModal');
+                hideLoading();
+
+                showNotification("success", "Order deleted successfully");
+            })
+            .catch(error => {
+                console.error("Error deleting order:", error);
+                hideLoading();
+                showNotification("error", "Failed to delete order");
+            });
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function showNotification(type, message) {
+        const notificationArea = document.getElementById('notificationArea');
+        const successNotification = document.getElementById('successNotification');
+        const errorNotification = document.getElementById('errorNotification');
+
+        successNotification.classList.add('hidden');
+        errorNotification.classList.add('hidden');
+
+        if (type === 'success') {
+            document.getElementById('successMessage').textContent = message;
+            successNotification.classList.remove('hidden');
+        } else {
+            document.getElementById('errorMessage').textContent = message;
+            errorNotification.classList.remove('hidden');
+        }
+
+        notificationArea.classList.remove('hidden');
+
+        setTimeout(() => {
+            hideNotification(type === 'success' ? 'successNotification' : 'errorNotification');
+        }, 5000);
+    }
+
+    function hideNotification(id) {
+        document.getElementById(id).classList.add('hidden');
+
+        if (document.getElementById('successNotification').classList.contains('hidden') &&
+            document.getElementById('errorNotification').classList.contains('hidden')) {
+            document.getElementById('notificationArea').classList.add('hidden');
+        }
+    }
+</script>
 </body>
 </html>
