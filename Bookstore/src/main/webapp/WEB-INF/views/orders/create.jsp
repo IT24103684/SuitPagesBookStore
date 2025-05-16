@@ -107,5 +107,187 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
+<script>
+    const userId = localStorage.getItem("userId");
+    let cartItems = [];
+    let bookDetails = {};
+    let cartTotal = 0;
+
+    const cartItemsContainer = document.getElementById("cartItemsContainer");
+    const cartTotalElement = document.getElementById("cartTotal");
+    const orderForm = document.getElementById("orderForm");
+    const addressInput = document.getElementById("address");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+
+    if (!userId) {
+        window.location.href = "/login?redirect=/checkout";
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        fetchCartItems();
+    });
+
+    function fetchCartItems() {
+        showLoading();
+
+        fetch("/api/carts/" + userId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch cart");
+                }
+                return response.json();
+            })
+            .then(data => {
+                cartItems = data.items || [];
+
+                if (cartItems.length === 0) {
+                    showEmptyCart();
+                } else {
+                    fetchBookDetails();
+                }
+            })
+            .catch(error => {
+                console.error("Error loading cart:", error);
+                hideLoading();
+                showError("Failed to load cart items. Please try again.");
+            });
+    }
+
+    function fetchBookDetails() {
+        const bookIds = cartItems.map(item => item.bookId);
+        const promises = bookIds.map(bookId =>
+            fetch("/api/books/" + bookId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch book details");
+                    }
+                    return response.json();
+                })
+        );
+
+        Promise.all(promises)
+            .then(books => {
+                books.forEach(book => {
+                    bookDetails[book.id] = book;
+                });
+                renderCartItems();
+                hideLoading();
+            })
+            .catch(error => {
+                console.error("Error loading book details:", error);
+                hideLoading();
+                showError("Failed to load book details. Please try again.");
+            });
+    }
+
+    function renderCartItems() {
+        if (cartItems.length === 0) {
+            showEmptyCart();
+            return;
+        }
+
+        let html = "";
+        cartTotal = 0;
+
+        cartItems.forEach(item => {
+            const book = bookDetails[item.bookId];
+            if (book) {
+                const itemTotal = book.price * item.quantity;
+                cartTotal += itemTotal;
+
+                html += "<div class=\"cart-item\">";
+                html += "<div class=\"d-flex justify-content-between\">";
+                html += "<div>";
+                html += "<h6>" + book.name + "</h6>";
+                html += "<small class=\"text-muted\">Qty: " + item.quantity + "</small>";
+                html += "</div>";
+                html += "<div>$" + itemTotal.toFixed(2) + "</div>";
+                html += "</div>";
+                html += "</div>";
+            }
+        });
+
+        cartItemsContainer.innerHTML = html;
+        cartTotalElement.textContent = "$" + cartTotal.toFixed(2);
+    }
+
+    function showEmptyCart() {
+        cartItemsContainer.innerHTML = "<p class=\"text-center\">Your cart is empty</p>";
+        cartTotalElement.textContent = "$0.00";
+        document.getElementById("placeOrderBtn").disabled = true;
+    }
+
+    orderForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
+        placeOrder();
+    });
+
+    function validateForm() {
+        let isValid = true;
+
+        if (!addressInput.value.trim()) {
+            addressInput.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            addressInput.classList.remove("is-invalid");
+        }
+
+        return isValid;
+    }
+
+    function placeOrder() {
+        showLoading();
+
+        const orderData = {
+            userId: userId,
+            address: addressInput.value.trim()
+        };
+
+        fetch("/api/orders", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(orderData)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || "Failed to place order");
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideLoading();
+                // Store success message in session storage
+                sessionStorage.setItem("orderSuccess", "Your order has been placed successfully!");
+                // Redirect to home page
+                window.location.href = "/";
+            })
+            .catch(error => {
+                console.error("Error placing order:", error);
+                hideLoading();
+                showError(error.message || "Failed to place order. Please try again.");
+            });
+    }
+
+    function showLoading() {
+        loadingOverlay.style.visibility = "visible";
+    }
+
+    function hideLoading() {
+        loadingOverlay.style.visibility = "hidden";
+    }
+
+    function showError(message) {
+        alert(message);
+    }
+</script>
 </body>
 </html>
