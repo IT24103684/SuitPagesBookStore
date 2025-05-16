@@ -6,7 +6,43 @@
     <title>Order Management - BookStore</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        .table-row-animate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
 
+        .btn-icon {
+            transition: transform 0.15s ease-in-out;
+        }
+
+        .btn-icon:hover {
+            transform: scale(1.15);
+        }
+
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+
+        .book-image {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 <nav class="bg-indigo-600 text-white shadow-lg">
