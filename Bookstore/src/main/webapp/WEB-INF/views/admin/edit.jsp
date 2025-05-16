@@ -6,6 +6,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@lucide/web@latest"></script>
     <style>
         .focus-ring:focus {
             outline: none;
@@ -133,5 +136,183 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+
+        const adminForm = document.getElementById('adminForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const adminId = document.getElementById('adminId').value;
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const showPasswordIcon = document.getElementById('showPasswordIcon');
+        const hidePasswordIcon = document.getElementById('hidePasswordIcon');
+
+        const patterns = {
+            name: /^[A-Za-z\s]{2,50}$/,
+            email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            password: /^.{8,}$/,
+            nicNumber: /^[0-9]{9}[vVxX]$|^[0-9]{12}$/  // Common NIC formats
+        };
+
+        togglePassword.addEventListener('click', function () {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                showPasswordIcon.classList.add('hidden');
+                hidePasswordIcon.classList.remove('hidden');
+            } else {
+                passwordInput.type = 'password';
+                showPasswordIcon.classList.remove('hidden');
+                hidePasswordIcon.classList.add('hidden');
+            }
+        });
+
+        function validateField(field, pattern, isRequired = true) {
+            const errorElement = document.getElementById(field.id + "Error");
+
+            if (field.id === 'password' && !field.value.trim()) {
+                errorElement.classList.add('hidden');
+                return true;
+            }
+
+            if (isRequired && field.required && !field.value.trim()) {
+                errorElement.textContent = field.name.charAt(0).toUpperCase() + field.name.slice(1) + " is required";
+                errorElement.classList.remove("hidden");
+                return false;
+            }
+
+            if (pattern && field.value.trim() && !pattern.test(field.value.trim())) {
+                if (field.id === 'name') {
+                    errorElement.textContent = 'Name should contain only letters and spaces (2-50 characters)';
+                } else if (field.id === 'email') {
+                    errorElement.textContent = 'Please enter a valid email address';
+                } else if (field.id === 'password') {
+                    errorElement.textContent = 'Password must be at least 8 characters long';
+                } else if (field.id === 'nicNumber') {
+                    errorElement.textContent = 'Please enter a valid NIC number';
+                }
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        adminForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+
+            const name = document.getElementById('name');
+            const email = document.getElementById('email');
+            const password = document.getElementById('password');
+            const nicNumber = document.getElementById('nicNumber');
+
+            const isNameValid = validateField(name, patterns.name);
+            const isEmailValid = validateField(email, patterns.email);
+            const isPasswordValid = validateField(password, patterns.password, false);
+            const isNicNumberValid = validateField(nicNumber, patterns.nicNumber);
+
+            if (isNameValid && isEmailValid && isPasswordValid && isNicNumberValid) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...';
+
+                const adminData = {
+                    id: adminId,
+                    name: name.value.trim(),
+                    email: email.value.trim(),
+                    nicNumber: nicNumber.value.trim()
+                };
+
+                if (password.value.trim()) {
+                    adminData.password = password.value;
+                }
+
+                const contextPath = "${pageContext.request.contextPath}";
+                const apiUrl = contextPath + "/api/admins/" + adminId;
+
+                fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(adminData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.message || 'Failed to update admin. Server returned ' + response.status);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        successMessage.querySelector('span').textContent = 'Admin updated successfully!';
+                        successMessage.classList.remove('hidden');
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                    })
+                    .catch(error => {
+                        errorMessage.querySelector('span').textContent = error.message || 'An unexpected error occurred';
+                        errorMessage.classList.remove('hidden');
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="save" class="h-5 w-5 mr-2"></i>Update Admin';
+                        lucide.createIcons();
+                    });
+            }
+        });
+
+        deleteBtn.addEventListener('click', function () {
+            if (confirm('Are you sure you want to delete this admin? This action cannot be undone.')) {
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Deleting...';
+                const contextPath = "${pageContext.request.contextPath}";
+                const apiUrl = contextPath + "/api/admins/" + adminId;
+
+                fetch(apiUrl, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to delete admin. Server returned ' + response.status);
+                        }
+                        window.location.href = contextPath + "/admins";
+                    })
+                    .catch(error => {
+                        errorMessage.querySelector('span').textContent = error.message || 'An unexpected error occurred';
+                        errorMessage.classList.remove('hidden');
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = '<i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>Delete';
+                        lucide.createIcons();
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                    });
+            }
+        });
+
+        document.getElementById('name').addEventListener('input', function () {
+            validateField(this, patterns.name);
+        });
+
+        document.getElementById('email').addEventListener('input', function () {
+            validateField(this, patterns.email);
+        });
+
+        document.getElementById('password').addEventListener('input', function () {
+            validateField(this, patterns.password, false);
+        });
+
+        document.getElementById('nicNumber').addEventListener('input', function () {
+            validateField(this, patterns.nicNumber);
+        });
+    });
+</script>
 </body>
 </html>
