@@ -91,5 +91,157 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userId = localStorage.getItem('userId');
+        const ordersContainer = document.getElementById('ordersContainer');
+
+        if (!userId) {
+            ordersContainer.innerHTML = '<div class="alert alert-warning">Please login to view your orders</div>';
+            return;
+        }
+
+
+        fetch('http://localhost:8080/api/orders/user/' + userId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch orders');
+                }
+                return response.json();
+            })
+            .then(orders => {
+                if (orders.length === 0) {
+                    showEmptyOrders();
+                    return;
+                }
+
+
+                const orderPromises = orders.map(order => {
+                    const itemPromises = order.items.map(item => {
+                        return fetch('http://localhost:8080/api/books/' + item.bookId)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Failed to fetch book details');
+                                }
+                                return response.json();
+                            })
+                            .then(book => {
+                                return {
+                                    ...item,
+                                    bookName: book.name,
+                                    bookImage: book.imageUrl,
+                                    bookPrice: book.price
+                                };
+                            });
+                    });
+
+                    return Promise.all(itemPromises)
+                        .then(itemsWithBooks => {
+                            return {
+                                ...order,
+                                items: itemsWithBooks
+                            };
+                        });
+                });
+
+                return Promise.all(orderPromises);
+            })
+            .then(ordersWithBooks => {
+                renderOrders(ordersWithBooks);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                ordersContainer.innerHTML = '<div class="alert alert-danger">Failed to load orders. Please try again later.</div>';
+            });
+    });
+
+    function renderOrders(orders) {
+        const ordersContainer = document.getElementById('ordersContainer');
+        ordersContainer.innerHTML = '';
+
+        if (orders.length === 0) {
+            showEmptyOrders();
+            return;
+        }
+
+        orders.forEach(order => {
+            const orderDate = new Date(order.orderDate);
+            const formattedDate = orderDate.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const statusClass = getStatusClass(order.status);
+
+            const orderDiv = document.createElement('div');
+            orderDiv.className = 'order-container';
+
+            let orderItemsHTML = '';
+            let orderTotal = 0;
+
+            order.items.forEach(item => {
+                const itemTotal = item.quantity * item.price;
+                orderTotal += itemTotal;
+
+                orderItemsHTML += '<div class="order-item">' +
+                    '<img src="' + (item.bookImage || 'https://via.placeholder.com/80x120?text=No+Image') + '" class="book-image" alt="' + item.bookName + '">' +
+                    '<div class="flex-grow-1">' +
+                    '<h5>' + item.bookName + '</h5>' +
+                    '<div class="d-flex justify-content-between">' +
+                    '<div>Quantity: ' + item.quantity + '</div>' +
+                    '<div>Price: $' + item.price.toFixed(2) + '</div>' +
+                    '</div>' +
+                    '<div class="text-end mt-2">' +
+                    '<strong>Total: $' + itemTotal.toFixed(2) + '</strong>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+            });
+
+            orderDiv.innerHTML = '<div class="order-header">' +
+                '<div class="d-flex justify-content-between">' +
+                '<div>' +
+                '<h4>Order #' + order.id.substring(0, 8) + '</h4>' +
+                '<p class="text-muted">' + formattedDate + '</p>' +
+                '</div>' +
+                '<div>' +
+                '<span class="order-status ' + statusClass + '">' + order.status + '</span>' +
+                '</div>' +
+                '</div>' +
+                '<p><strong>Shipping Address:</strong> ' + order.address + '</p>' +
+                '</div>' +
+                orderItemsHTML +
+                '<div class="text-end mt-3">' +
+                '<h4>Order Total: $' + orderTotal.toFixed(2) + '</h4>' +
+                '</div>';
+
+            ordersContainer.appendChild(orderDiv);
+        });
+    }
+
+    function getStatusClass(status) {
+        switch(status.toUpperCase()) {
+            case 'PENDING':
+                return 'status-pending';
+            case 'COMPLETED':
+                return 'status-completed';
+            case 'CANCELLED':
+                return 'status-cancelled';
+            default:
+                return '';
+        }
+    }
+
+    function showEmptyOrders() {
+        const ordersContainer = document.getElementById('ordersContainer');
+        ordersContainer.innerHTML = '<div class="empty-orders">' +
+            '<i class="fas fa-box-open"></i>' +
+            '<h3>No orders found</h3>' +
+            '<p>You haven\'t placed any orders yet.</p>' +
+            '<a href="books.jsp" class="btn btn-primary">Browse Books</a>' +
+            '</div>';
+    }
+</script>
 </body>
 </html>
