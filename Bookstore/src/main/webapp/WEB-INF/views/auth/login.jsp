@@ -12,7 +12,16 @@
             padding: 0;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f7;
+            background: url('https://images.wallpaperscraft.com/image/single/books_library_shelves_138556_1920x1080.jpg') no-repeat center center fixed, #f0f0f0;
+        }
+
+        @keyframes libraryShift {
+            0% {
+                background-position: 0 0, 0 0, 0 0;
+            }
+            100% {
+                background-position: 0 0, 0 60px, 60px 0;
+            }
         }
 
         .container {
@@ -24,10 +33,39 @@
         .login-container {
             max-width: 450px;
             margin: 2rem auto;
-            background-color: white;
+            background-color: rgba(255, 255, 255, 0.85);
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                    linear-gradient(90deg, #8B4513 2%, transparent 2%),
+                    linear-gradient(90deg, #DEB887 4%, transparent 4%),
+                    linear-gradient(90deg, #A0522D 6%, transparent 6%),
+                    linear-gradient(to bottom, #4A2F1A 10%, #3C2515 90%);
+            background-size: 50px 100%, 50px 100%, 50px 100%, 100% 100%;
+            animation: slideBookshelf 12s linear infinite;
+            z-index: -1;
+            opacity: 0.7;
+        }
+
+        @keyframes slideBookshelf {
+            0% {
+                background-position: 0 0, 0 0, 0 0, 0 0;
+            }
+            100% {
+                background-position: 100px 0, 100px 0, 100px 0, 0 0;
+            }
         }
 
         .login-header {
@@ -39,6 +77,18 @@
             font-size: 1.8rem;
             color: #1a1a2e;
             margin-bottom: 0.5rem;
+            animation: welcomeFadeIn 1.5s ease-in-out forwards;
+        }
+
+        @keyframes welcomeFadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .login-subtitle {
@@ -253,16 +303,13 @@
         const errorMessage = document.getElementById('error-message');
         const errorText = document.getElementById('error-text');
 
-
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
             errorMessage.classList.remove('show');
 
-
             loginBtn.classList.add('btn-loading');
             loginBtn.innerHTML = '';
-
 
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -287,7 +334,6 @@
                     return response.json();
                 })
                 .then(data => {
-
                     localStorage.setItem('userId', data.id);
 
 
@@ -300,7 +346,6 @@
                     }
 
                     if (remember) {
-
                         localStorage.setItem('rememberUser', 'true');
                     }
 
@@ -313,7 +358,6 @@
 
                     loginBtn.classList.remove('btn-loading');
                     loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-
 
                     errorText.textContent = 'Invalid email or password. Please try again.';
                     errorMessage.classList.add('show');
@@ -329,7 +373,6 @@
             if (!results[2]) return '';
             return decodeURIComponent(results[2].replace(/\+/g, ' '));
         }
-
 
         if (localStorage.getItem('userId')) {
             window.location.href = 'index';
