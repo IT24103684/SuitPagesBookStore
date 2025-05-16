@@ -5,6 +5,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admins List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        .table-row-animate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .btn-icon {
+            transition: transform 0.15s ease-in-out;
+        }
+
+        .btn-icon:hover {
+            transform: scale(1.15);
+        }
+
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 <nav class="bg-indigo-600 text-white shadow-lg">
