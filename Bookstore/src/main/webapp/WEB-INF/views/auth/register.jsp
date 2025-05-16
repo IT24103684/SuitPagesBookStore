@@ -10,10 +10,169 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@lucide/web@latest"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        .focus-ring:focus {
+        :root {
+            --primary: #3b82f6;
+            --text-dark: #1f2937;
+            --gray-light: #d1d5db;
+        }
+
+        body {
+            background: url('https://images.wallpaperscraft.com/image/single/books_library_shelves_138556_1920x1080.jpg') no-repeat center center fixed, #f0f0f0;
+            background-size: cover;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.8); /* Slightly more transparent for frosted glass effect */
+            backdrop-filter: blur(10px); /* Reduced blur for a softer effect like the image */
+            -webkit-backdrop-filter: blur(10px); /* For Safari support */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .form-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .form-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            z-index: 10;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--gray-light);
+            border-radius: 0.5rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            font-size: 0.875rem;
+            color: var(--text-dark);
+        }
+
+        .form-input:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6b7280;
+            z-index: 10;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .radio-group input[type="radio"] {
+            accent-color: var(--primary);
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-dark);
+            font-size: 0.875rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(to right, var(--primary), #60a5fa);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .login-link {
+            display: block;
+            text-align: center;
+            margin-top: 1rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .login-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: var(--primary);
+            font-size: 0.875rem;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            .form-container {
+                padding: 1.5rem;
+                max-width: 90%;
+            }
+            .form-title {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -331,6 +490,7 @@
                     gender: gender
                 };
 
+
                 fetch('/api/users', {
                     method: 'POST',
                     headers: {
@@ -350,20 +510,21 @@
 
                         registerForm.reset();
 
-
                         showSuccess('Account created successfully! Redirecting to login page...');
-
 
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '<i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>Create Account';
                         lucide.createIcons();
+
 
                         setTimeout(() => {
                             window.location.href = '/login';
                         }, 2000);
                     })
                     .catch(error => {
+
                         showError(error.message || 'An error occurred while creating your account');
+
 
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '<i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>Create Account';
