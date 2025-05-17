@@ -2,7 +2,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login | Bookstore</title>
@@ -78,5 +77,46 @@
         &copy; 2023 Bookstore Admin Panel. All rights reserved.
     </div>
 </div>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        document.getElementById("loginButtonText").textContent = "Signing in...";
+        document.getElementById("loginSpinner").classList.remove("hidden");
+
+        var email = document.getElementById("email").value;
+        var password = document.getElementById("password").value;
+        document.getElementById("errorMessage").classList.add("hidden");
+        var data = JSON.stringify({
+            "email": email,
+            "password": password
+        });
+        fetch("/api/admins/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: data
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (errorData) {
+                        throw new Error(errorData.error || "Invalid credentials");
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                window.location.href = "/admin";
+            })
+            .catch(function (error) {
+                var errorMessage = document.getElementById("errorMessage");
+                errorMessage.textContent = error.message || "Login failed. Please try again.";
+                errorMessage.classList.remove("hidden");
+                document.getElementById("loginButtonText").textContent = "Sign in";
+                document.getElementById("loginSpinner").classList.add("hidden");
+            });
+    });
+</script>
 </body>
 </html>
