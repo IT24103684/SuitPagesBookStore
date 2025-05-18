@@ -22,11 +22,11 @@ public class UserDTO {
     @NotBlank(message = "Gender is required")
     private String gender;
 
-    // Default constructor
+
     public UserDTO() {
     }
 
-    // Constructor without id for creating new users
+
     public UserDTO(String name, String email, String address, String password, String gender) {
         this.name = name;
         this.email = email;
@@ -35,7 +35,7 @@ public class UserDTO {
         this.gender = gender;
     }
 
-    // Full constructor
+
     public UserDTO(String id, String name, String email, String address, String password, String gender) {
         this.id = id;
         this.name = name;
@@ -45,7 +45,7 @@ public class UserDTO {
         this.gender = gender;
     }
 
-    // Getters and setters
+
     public String getId() {
         return id;
     }
