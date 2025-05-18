@@ -18,12 +18,9 @@ public class AdminDTO {
 
     @NotBlank(message = "NIC number is required")
     private String nicNumber;
-
-    // Default constructor
     public AdminDTO() {
     }
 
-    // Constructor without id for creating new admins
     public AdminDTO(String name, String email, String password, String nicNumber) {
         this.name = name;
         this.email = email;
@@ -31,7 +28,6 @@ public class AdminDTO {
         this.nicNumber = nicNumber;
     }
 
-    // Full constructor
     public AdminDTO(String id, String name, String email, String password, String nicNumber) {
         this.id = id;
         this.name = name;
@@ -40,7 +36,6 @@ public class AdminDTO {
         this.nicNumber = nicNumber;
     }
 
-    // Getters and setters
     public String getId() {
         return id;
     }
